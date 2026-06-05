@@ -1,0 +1,334 @@
+name: HyperOS ROM Dumper (DumprX -> Branch)
+
+on:
+  workflow_dispatch:
+    inputs:
+      rom_url:
+        description: "Direct ROM URL (will be used exactly as entered)"
+        required: true
+        type: string
+      target_branch:
+        description: "Branch to push dump files (set auto to generate from ROM info)"
+        required: false
+        default: "auto"
+        type: string
+      device_name:
+        description: "Device codename override (optional)"
+        required: false
+        default: "unknown"
+        type: string
+      extract_contents:
+        description: "Extract mounted filesystem contents when possible"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      compress_images:
+        description: "Compress *.img with xz before commit"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  dump-rom:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Prepare workspace and free disk
+        run: |
+          set -e
+          echo ":: Disk before"
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/.ghcup "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean -qq || true
+          sudo docker image prune --all --force 2>/dev/null || true
+          echo ":: Disk after"
+          df -h /
+
+      - name: Install dependencies for DumprX
+        run: |
+          set -e
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            git curl jq aria2 file rsync unzip tar zip \
+            python3 python3-pip xz-utils \
+            p7zip-full unrar sharutils cabextract \
+            brotli liblz4-tool gawk detox cpio rename \
+            device-tree-compiler \
+            android-sdk-libsparse-utils e2fsprogs e2tools erofs-utils \
+            git-lfs
+
+          if ! command -v uv >/dev/null 2>&1; then
+            curl -fsSL https://astral.sh/uv/install.sh | sh
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fi
+
+      - name: Validate input URL (no auto/fallback links)
+        id: validate
+        run: |
+          set -e
+          URL='${{ inputs.rom_url }}'
+          [ -n "$URL" ] || { echo "ERROR: rom_url is empty"; exit 1; }
+          echo "$URL" | grep -qE '^https?://' || { echo "ERROR: rom_url must start with http/https"; exit 1; }
+          echo "rom_url=$URL" >> "$GITHUB_OUTPUT"
+          echo ":: Using EXACT user URL"
+          echo "$URL"
+
+      - name: Clone DumprX toolkit
+        run: |
+          set -e
+          rm -rf /tmp/DumprX
+          git clone --depth=1 https://github.com/DumprX/DumprX.git /tmp/DumprX
+
+      - name: Run DumprX with exact user URL
+        run: |
+          set +e
+          cd /tmp/DumprX
+          chmod +x dumper.sh setup.sh
+          export TERM=xterm
+
+          # User requested DumprX to handle the URL directly.
+          ./dumper.sh '${{ steps.validate.outputs.rom_url }}'
+          DUMP_EXIT=$?
+
+          # DumprX may exit non-zero for metadata/push checks even when files were dumped.
+          if [ "$DUMP_EXIT" -ne 0 ]; then
+            echo ":: DumprX exited with code $DUMP_EXIT"
+            if [ -d /tmp/DumprX/out ] && [ -n "$(find /tmp/DumprX/out -type f | head -n1)" ]; then
+              echo ":: Continuing because dump files exist in /tmp/DumprX/out"
+            else
+              echo "ERROR: DumprX failed and produced no output files"
+              exit "$DUMP_EXIT"
+            fi
+          fi
+
+      - name: Collect output files
+        run: |
+          set -e
+          DUMP_ROOT="/tmp/final_dump"
+          mkdir -p "$DUMP_ROOT"
+
+          if [ ! -d /tmp/DumprX/out ]; then
+            echo "ERROR: DumprX did not produce /tmp/DumprX/out"
+            exit 1
+          fi
+
+          rsync -a /tmp/DumprX/out/ "$DUMP_ROOT/"
+
+          # Keep source URL and run metadata at branch root.
+          {
+            echo "rom_url=${{ steps.validate.outputs.rom_url }}"
+            echo "target_branch_input=${{ inputs.target_branch }}"
+            echo "device_name_input=${{ inputs.device_name }}"
+            echo "workflow_run=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "dumped_at=$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          } > "$DUMP_ROOT/_dump_info.txt"
+
+      - name: Resolve target branch name
+        id: branch
+        run: |
+          set -e
+          INPUT_BRANCH='${{ inputs.target_branch }}'
+
+          sanitize() {
+            echo "$1" \
+              | tr '[:upper:]' '[:lower:]' \
+              | sed -E 's/[^a-z0-9._-]+/-/g; s/-+/-/g; s/^-+//; s/-+$//'
+          }
+
+          if [ -n "$INPUT_BRANCH" ] && [ "$INPUT_BRANCH" != "auto" ]; then
+            BRANCH=$(sanitize "$INPUT_BRANCH")
+          else
+            README="/tmp/final_dump/README.md"
+            BRAND=$(awk -F': ' '/^- Brand:/{print $2; exit}' "$README" 2>/dev/null || true)
+            CODENAME=$(awk -F': ' '/^- Codename:/{print $2; exit}' "$README" 2>/dev/null || true)
+            INCREMENTAL=$(awk -F': ' '/^- Incremental:/{print $2; exit}' "$README" 2>/dev/null || true)
+
+            [ -n "$CODENAME" ] || CODENAME='${{ inputs.device_name }}'
+            [ -n "$BRAND" ] || BRAND='stock'
+
+            RAW="dump-${BRAND}-${CODENAME}-${INCREMENTAL}"
+            BRANCH=$(sanitize "$RAW")
+          fi
+
+          [ -n "$BRANCH" ] || BRANCH="dumps-$(date +%Y%m%d-%H%M%S)"
+          [ "$BRANCH" != "main" ] || BRANCH="dumps-$(date +%Y%m%d-%H%M%S)"
+
+          echo "target_branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "Resolved target branch: $BRANCH"
+
+          echo "target_branch_resolved=$BRANCH" >> /tmp/final_dump/_dump_info.txt
+
+      - name: Recovery fallback from vendor_boot
+        run: |
+          set -e
+          ROOT="/tmp/final_dump"
+
+          # Some A/B devices keep recovery ramdisk inside vendor_boot.
+          if ! find "$ROOT" -type f -iname 'recovery.img' | grep -q .; then
+            VB=$(find "$ROOT" -type f -iname 'vendor_boot*.img' | head -n1 || true)
+            if [ -n "$VB" ] && [ -f "$VB" ]; then
+              cp "$VB" "$ROOT/recovery_from_vendor_boot.img"
+              echo "recovery_fallback=vendor_boot" >> "$ROOT/_dump_info.txt"
+              echo "recovery_source_file=$(basename "$VB")" >> "$ROOT/_dump_info.txt"
+              echo ":: recovery.img not found, fallback created from vendor_boot"
+            else
+              echo ":: no recovery.img and no vendor_boot.img found"
+            fi
+          else
+            echo ":: recovery.img exists"
+          fi
+
+      - name: Optional image compression
+        if: inputs.compress_images == 'true'
+        run: |
+          set -e
+          DUMP_ROOT="/tmp/final_dump"
+          find "$DUMP_ROOT" -type f -name '*.img' -print0 | while IFS= read -r -d '' img; do
+            xz -T0 -6 "$img"
+          done
+
+      - name: Optional filesystem extraction pass
+        if: inputs.extract_contents == 'true'
+        run: |
+          set -e
+          DUMP_ROOT="/tmp/final_dump"
+          EXTRACT_ROOT="$DUMP_ROOT/extracted"
+          mkdir -p "$EXTRACT_ROOT"
+
+          find "$DUMP_ROOT" -maxdepth 2 -type f -name '*.img' -print0 | while IFS= read -r -d '' img; do
+            name=$(basename "$img" .img)
+            out="$EXTRACT_ROOT/$name"
+            mkdir -p "$out"
+
+            if debugfs -R "rdump / $out" "$img" >/dev/null 2>&1; then
+              continue
+            fi
+
+            loop=$(sudo losetup -f --show "$img" 2>/dev/null || true)
+            if [ -n "$loop" ]; then
+              mnt="/tmp/mnt_$name"
+              mkdir -p "$mnt"
+              if sudo mount -o ro "$loop" "$mnt" 2>/dev/null; then
+                sudo rsync -a "$mnt/" "$out/" || true
+                sudo umount "$mnt" 2>/dev/null || true
+              fi
+              sudo losetup -d "$loop" 2>/dev/null || true
+            fi
+
+            sudo chown -R "$USER:$USER" "$out" 2>/dev/null || true
+          done
+
+      - name: Push all dump files to target branch root
+        run: |
+          set -e
+          BRANCH='${{ steps.branch.outputs.target_branch }}'
+          [ -n "$BRANCH" ] || { echo "ERROR: resolved branch is empty"; exit 1; }
+          [ "$BRANCH" != "main" ] || { echo "ERROR: target branch cannot be main"; exit 1; }
+
+          git lfs install
+          git config --global http.version HTTP/1.1
+          git config --global http.postBuffer 1048576000
+          git config --global core.compression 0
+
+          git fetch origin
+          if git ls-remote --heads origin "$BRANCH" | grep -q "$BRANCH"; then
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+          else
+            git checkout --orphan "$BRANCH"
+          fi
+
+          # Clean branch root so new dump is directly at root, not inside folders.
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+
+          # Track large binary files with LFS before adding.
+          git lfs track "*.img" "*.img.xz" "*.bin" "*.new.dat" "*.br" "*.dat" "*.payload"
+
+          rsync -a /tmp/final_dump/ ./
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          push_retry() {
+            local tries=5
+            local i=1
+            local local_sha
+            local remote_sha
+            local_sha=$(git rev-parse HEAD)
+
+            while [ "$i" -le "$tries" ]; do
+              if git push -f origin "$BRANCH"; then
+                return 0
+              fi
+
+              remote_sha=$(git ls-remote origin "refs/heads/$BRANCH" | awk '{print $1}')
+              if [ -n "$remote_sha" ] && [ "$remote_sha" = "$local_sha" ]; then
+                echo "Remote already has the latest commit"
+                return 0
+              fi
+
+              echo "Push failed (attempt $i/$tries). Retrying in 15s..."
+              sleep 15
+              i=$((i + 1))
+            done
+
+            return 1
+          }
+
+          # Commit in chunks (top-level paths) to reduce push payload and avoid HTTP 500.
+          if [ -f .gitattributes ]; then
+            git add .gitattributes
+            if ! git diff --cached --quiet; then
+              git commit -m "dump: lfs attributes"
+              push_retry
+            fi
+          fi
+
+          for path in *; do
+            [ -e "$path" ] || continue
+            git add "$path"
+            if git diff --cached --quiet; then
+              continue
+            fi
+            git commit -m "dump: add $path"
+            push_retry
+          done
+
+          # Fallback final add if anything left unstaged.
+          git add .
+          if ! git diff --cached --quiet; then
+            git commit -m "dump: finalize"
+            push_retry
+          fi
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## DumprX Dump Complete"
+            echo
+            echo "- URL used exactly: \`${{ steps.validate.outputs.rom_url }}\`"
+            echo "- Commit branch: \`${{ steps.branch.outputs.target_branch }}\`"
+            echo "- Files pushed at branch root: \`yes\`"
+            echo "- Release upload: disabled"
+            echo
+            if [ -d "/tmp/final_dump" ]; then
+              echo "### Files"
+              echo '```'
+              ls -lah /tmp/final_dump | sed -n '1,200p'
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
