@@ -1,0 +1,4 @@
+# Miscellaneous
+ro.logd.size=2M
+ro.vendor.nfc.wallet_fusion=1
+
