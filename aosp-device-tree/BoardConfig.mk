@@ -8,16 +8,16 @@ DEVICE_PATH := device/xiaomi/generic
 # A/B
 AB_OTA_UPDATER := true
 AB_OTA_PARTITIONS += \
-    product \
-    vbmeta_vendor \
+    boot \
     system_ext \
+    vbmeta_vendor \
     system_dlkm \
-    odm_dlkm \
     vendor \
     vendor_dlkm \
     system \
-    boot \
-    vbmeta_system
+    odm_dlkm \
+    vbmeta_system \
+    product
 BOARD_USES_RECOVERY_AS_BOOT := true
 
 # Architecture
@@ -74,13 +74,13 @@ BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE := 67108864
 BOARD_SUPER_PARTITION_SIZE := 9126805504 # TODO: Fix hardcoded value
 BOARD_SUPER_PARTITION_GROUPS := xiaomi_dynamic_partitions
 BOARD_XIAOMI_DYNAMIC_PARTITIONS_PARTITION_LIST := \
-    product \
     system_ext \
     system_dlkm \
-    odm_dlkm \
     vendor \
     vendor_dlkm \
-    system
+    system \
+    odm_dlkm \
+    product
 BOARD_XIAOMI_DYNAMIC_PARTITIONS_SIZE := 9122611200 # TODO: Fix hardcoded value
 
 # Platform
