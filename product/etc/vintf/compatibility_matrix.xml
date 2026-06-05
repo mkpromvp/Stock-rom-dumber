@@ -1,0 +1,114 @@
+<!--
+    Input:
+        device/xiaomi/spinel/product/vendor_framework_compatibility_matrix.xml
+        device/xiaomi/missi/device_framework_compatibility_matrix/miguardca/vendor_framework_compatibility_matrix.xml
+        device/xiaomi/spinel/product/vendor_framework_compatibility_matrix_mpayjoy.xml
+        device/xiaomi/spinel/product/vendor_framework_compatibility_matrix.xml
+        device/xiaomi/spinel/product/vendor_framework_compatibility_matrix_mpayjoy.xml
+        vendor/mediatek/proprietary/packages/apps/FactoryAPP/interfaces/xml/factoryService_framework_compatibility_matrix.xml
+        vendor/mediatek/proprietary/packages/apps/FactoryAPP/interfaces/xml/customNvService_framework_compatibility_matrix.xml
+        device/xiaomi/missi/device_framework_compatibility_matrix/mrm/vendor_framework_compatibility_matrix.xml
+        device/xiaomi/missi/device_framework_compatibility_matrix/mikeybag/vendor_framework_compatibility_matrix.xml
+-->
+<compatibility-matrix version="8.0" type="framework">
+    <hal format="aidl" optional="true">
+        <name>android.hardware.vibrator</name>
+        <version>2</version>
+        <interface>
+            <name>IVibrator</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>android.hardware.vibrator</name>
+        <version>2</version>
+        <interface>
+            <name>IVibrator</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>interfaces.customNvService</name>
+        <interface>
+            <name>ICustomNv</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>interfaces.factoryAta</name>
+        <interface>
+            <name>IFactoryAta</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>interfaces.factoryInterface</name>
+        <interface>
+            <name>IFactoryInterface</name>
+            <instance>default</instance>
+        </interface>
+        <interface>
+            <name>IFactorySensor</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.xiaomi.hardware.miguardca</name>
+        <version>1.0</version>
+        <interface>
+            <name>IMiguardService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>vendor.xiaomi.hardware.mikeybag</name>
+        <interface>
+            <name>IMiKeyBagService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>vendor.xiaomi.hardware.misauth</name>
+        <interface>
+            <name>IMiSharedAuth</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.xiaomi.hardware.mpayjoyca</name>
+        <version>1.0</version>
+        <interface>
+            <name>IPayjoyService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="hidl" optional="true">
+        <name>vendor.xiaomi.hardware.mpayjoyca</name>
+        <version>1.0</version>
+        <interface>
+            <name>IPayjoyService</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>vendor.xiaomi.hardware.mrm</name>
+        <interface>
+            <name>IMrm</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>vendor.xiaomi.hardware.mrm</name>
+        <interface>
+            <name>IMiCertificate</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+    <hal format="aidl" optional="true">
+        <name>vendor.xiaomi.hardware.mrm</name>
+        <interface>
+            <name>IMrmRemoteAuth</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+</compatibility-matrix>
