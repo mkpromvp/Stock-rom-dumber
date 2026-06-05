@@ -9,8 +9,12 @@
 *.new.dat filter=lfs diff=lfs merge=lfs -text
 *.payload filter=lfs diff=lfs merge=lfs -text
 *.zip filter=lfs diff=lfs merge=lfs -text
-.git/objects/pack/pack-4a666be9d17085b798c9e80ee770bab9ed1bedbd.pack filter=lfs diff=lfs merge=lfs -text
-.git/objects/pack/pack-a4622dc97dd78bc5a93b73498aacd99a482d037f.pack filter=lfs diff=lfs merge=lfs -text
+.git/lfs/objects/14/f3/14f31fc1e6575f18fba6c410edd8e8324990d282bffe35ac115c0fdd07c92049 filter=lfs diff=lfs merge=lfs -text
+.git/lfs/objects/80/a9/80a946d4d8233c865c0e4b98771b4ae7166766546747e4870f4e9b59eb37a253 filter=lfs diff=lfs merge=lfs -text
+.git/lfs/objects/8d/2b/8d2b27d6af7fb3b24b8a50b76a1e4544ad6c3d8148ba7f37eff4974c143d241f filter=lfs diff=lfs merge=lfs -text
+.git/lfs/objects/b1/8c/b18c15ce5cca88f64f7b79ca4f867cf5d85d57743bc93655c3309c83dd1a88c0 filter=lfs diff=lfs merge=lfs -text
+.git/lfs/objects/f8/60/f86085d84bc0881a57db7449336a6dd6686e0ff551079bf0a1668ab3a01e8778 filter=lfs diff=lfs merge=lfs -text
+.git/objects/pack/pack-8eb9643fe9be53f4afe9042dce7921cf40f81748.pack filter=lfs diff=lfs merge=lfs -text
 boot.img filter=lfs diff=lfs merge=lfs -text
 cust/app/customized/partner-com.booking_85/partner-com.booking_85.apk filter=lfs diff=lfs merge=lfs -text
 mi_ext/product/data-app/SmartHome/SmartHome.apk filter=lfs diff=lfs merge=lfs -text
