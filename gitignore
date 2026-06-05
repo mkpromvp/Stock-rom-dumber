@@ -1,7 +1,0 @@
-rom_dl/
-out/
-*.img
-*.tgz
-*.zip
-*.tar.gz
-*.payload
