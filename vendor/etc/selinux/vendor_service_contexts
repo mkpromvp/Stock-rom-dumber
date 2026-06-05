@@ -1,0 +1,40 @@
+#line 1 "device/mediatek/sepolicy/bsp/non_plat/service_contexts"
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+android.hardware.neuralnetworks.IDevice/mtk-gpu_shim    u:object_r:hal_neuralnetworks_service:s0
+android.hardware.neuralnetworks.IDevice/mtk-dsp_shim    u:object_r:hal_neuralnetworks_service:s0
+android.hardware.neuralnetworks.IDevice/mtk-mdla_shim   u:object_r:hal_neuralnetworks_service:s0
+android.hardware.neuralnetworks.IDevice/mtk-neuron_shim u:object_r:hal_neuralnetworks_service:s0
+# add for mi_nfc
+mi_nfc                                u:object_r:mi_nfc_service:s0
+
+#P7 touch
+vendor.xiaomi.hw.touchfeature.ITouchFeature/default u:object_r:hal_touchfeature_xiaomi_service:s0
+#vendor.xiaomi.hw.touchfeature.ITouchFeature/default u:object_r:default_android_hwservice:s0
+
+#miguardca
+miguardca_access_service                                   u:object_r:miguardca_access_service:s0
+
+#payjoy
+payjoy_access_service                                   u:object_r:payjoy_access_service:s0
+#line 1 "vendor/mediatek/proprietary/packages/apps/FactoryAPP/Factory-hal/sepolicy/version_common/common/service_contexts"
+
+interfaces.factoryInterface.IFactoryInterface/default  u:object_r:vendor_hal_factory_interface_service:s0
+interfaces.factoryInterface.IFactorySensor/default     u:object_r:vendor_hal_factory_interface_service:s0
+interfaces.factoryAta.IFactoryAta/default              u:object_r:vendor_hal_factory_interface_service:s0
+interfaces.customNvService.ICustomNv/default           u:object_r:vendor_hal_factory_interface_service:s0
+
+#line 1 "vendor/xiaomi/proprietary/miriskmanager/sepolicy/service_contexts"
+
+# mrmd services
+vendor.xiaomi.hardware.mrm.IMrm/default            u:object_r:hal_mrm_service:s0
+vendor.xiaomi.hardware.mrm.IMiCertificate/default  u:object_r:hal_mrm_service:s0
+vendor.xiaomi.hardware.mrm.IMrmRemoteAuth/default  u:object_r:hal_mrm_service:s0
+vendor.xiaomi.hardware.misauth.IMiSharedAuth/default  u:object_r:hal_mrm_service:s0
+#line 1 "vendor/xiaomi/proprietary/miface/sepolicy/common/service_contexts"
+
+#vendor.xiaomi.hardware.seccam.IMiSecCam/default          u:object_r:hal_miface_service:s0
+vendor.xiaomi.hardware.aon.IAlwaysOn/miaonservicebymiface u:object_r:hal_miface_service:s0
+vendor.xiaomi.hardware.aek.IAEKService/default            u:object_r:hal_miface_service:s0
