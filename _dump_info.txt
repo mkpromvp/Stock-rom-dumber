@@ -1,0 +1,30 @@
+rom_url=https://xm04.space/MyUrLiwlJzsOOD0BMz8GIywRNEEOFTAINBUpIzE/KzUOPDJBGyEELhsQMDUxIS0eGz8dLzE/Hx4OFQRBDjwfDDQ8Kw8bFQQeNBIuAA4KBCYzPC0wMQofHg4KHwwxED0kQh4HLycSIjgnFiwvJxIXFQMyNR8QMjUfDhEbCCwKMhwbEQAMOQoEJjwRLSM5FTQtLDA9JEIeBy8nEiI4JxYsLycSFxUDMjUfEDI1HzweB0EnAjlBJwMJFw4CHUEnFh0vJxYaHCcDQi8nBD0gMSE9ATkVABwbAywwGxUfAhsCBwAbARcuGz8IOhwWCT8FFh0/HwMGOB8WQhM=
+target_branch_input=auto
+device_name_input=fire
+workflow_run=https://github.com/mkpromvp/Stock-rom-dumber/actions/runs/27019265576
+dumped_at=2026-06-05 14:15:37 UTC
+target_branch_resolved=dump-redmi-fire-os2.0.207.0.vmxmixm
+recovery_fallback=vendor_boot
+recovery_source_file=vendor_boot.img
+
+## Skipped APKs (>100MB)
+mi_ext/product/priv-app/MIBrowserGlobal_builtin_before_2021/MIBrowserGlobal_builtin_before_2021.apk | 191M
+mi_ext/product/priv-app/Messages_arm64_xxhdpi/Messages_arm64_xxhdpi.apk | 143M
+mi_ext/product/priv-app/MIUIVideoPlayer/MIUIVideoPlayer.apk | 104M
+product/data-app/MIMediaEditorGlobal/MIMediaEditorGlobal.apk | 196M
+product/priv-app/MIUIMusicGlobal/MIUIMusicGlobal.apk | 104M
+product/priv-app/MIUIAICR/MIUIAICR.apk | 169M
+product/priv-app/Velvet/Velvet.apk | 245M
+product/priv-app/MIUIGalleryGlobal/MIUIGalleryGlobal.apk | 101M
+product/priv-app/GmsCore/GmsCore.apk | 165M
+product/priv-app/MiuiCamera/MiuiCamera.apk | 167M
+product/priv-app/ExtraPhotoGlobal/ExtraPhotoGlobal.apk | 219M
+product/app/YouTube/YouTube.apk | 104M
+product/app/Photos/Photos.apk | 127M
+product/app/TrichromeLibrary64/TrichromeLibrary64.apk | 169M
+product/app/Gmail2/Gmail2.apk | 128M
+cust/app/customized/partner-com.zhiliaoapp.musically_100/partner-com.zhiliaoapp.musically_100.apk | 150M
+cust/app/customized/partner-com.amazon.mShop.android.shopping_41/partner-com.amazon.mShop.android.shopping_41.apk | 133M
+cust/app/customized/partner-com.ss.android.ugc.trill_101/partner-com.ss.android.ugc.trill_101.apk | 150M
+cust/app/customized/partner-com.lazada.android_86/partner-com.lazada.android_86.apk | 119M
+system_ext/priv-app/Settings/Settings.apk | 172M
