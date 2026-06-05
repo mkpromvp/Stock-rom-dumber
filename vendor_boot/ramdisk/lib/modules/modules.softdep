@@ -1,0 +1,5 @@
+# Soft dependencies extracted from modules themselves.
+softdep mt6789_dcm pre:mtk_dcm.ko
+softdep panel_p7_36_0d_0a_dsc_vdo pre: et5904-regulator
+softdep panel_p7_35_0f_0c_dsc_vdo pre: et5904-regulator
+softdep panel_p7_41_02_0b_dsc_vdo pre: et5904-regulator
