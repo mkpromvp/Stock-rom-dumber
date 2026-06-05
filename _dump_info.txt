@@ -1,0 +1,8 @@
+rom_url=https://bkt-sgp-miui-ota-update-alisgp.oss-ap-southeast-1.aliyuncs.com/OS3.0.301.0.WPGMIXM/spinel_global-ota_full-OS3.0.301.0.WPGMIXM-user-16.0-023314584a.zip
+target_branch_input=auto
+device_name_input=spinel
+workflow_run=https://github.com/mkpromvp/Stock-rom-dumber/actions/runs/26988606143
+dumped_at=2026-06-05 01:10:45 UTC
+target_branch_resolved=dump-redmi-spinel-os3.0.301.0.wpgmixm
+recovery_fallback=vendor_boot
+recovery_source_file=vendor_boot.img
