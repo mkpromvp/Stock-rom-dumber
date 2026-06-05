@@ -2,7 +2,7 @@ README.md|41e0a6e50b529f43e8aea5602f4389061bda2350
 aosp-device-tree/Android.bp|e338a034908dc1476727275f86f57a7a056c8968
 aosp-device-tree/Android.mk|c1f2272371bea23a2a7face6f94037e3d2c4aa5b
 aosp-device-tree/AndroidProducts.mk|2a09395ca1a63581e621700141aa6842addd732a
-aosp-device-tree/BoardConfig.mk|6c16b59d2dc233837bd21d0ccca04c3814925155
+aosp-device-tree/BoardConfig.mk|29f2f5f5edd4570420e67488b1dc9b415e967c0c
 aosp-device-tree/README.md|5c21be753b1dc2b1b0af5e008eb46e219759fd96
 aosp-device-tree/device.mk|d0f59c1230379a7bf8172695882a12457f384a49
 aosp-device-tree/extract-files.py|71ee1d3896a19044a92bf16dbad277560dc9a286
