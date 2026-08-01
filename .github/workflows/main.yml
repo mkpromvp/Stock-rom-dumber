@@ -63,6 +63,9 @@ on:
 jobs:
   dump-rom:
     runs-on: ubuntu-latest
+    concurrency:
+      group: dumprx-${{ github.event.inputs.rom_url }}
+      cancel-in-progress: false
     permissions:
       contents: write
 
@@ -430,19 +433,19 @@ jobs:
 
               ok=false
               for i in 1 2 3; do
-                if [ "$i" -lt 3 ]; then
-                  push_cmd="git push origin $BRANCH"
-                else
-                  # Last resort only: keeps anything new on the remote, just moves the ref.
-                  push_cmd="git push --force-with-lease origin $BRANCH"
-                fi
-                if $push_cmd; then
+                if git push origin "$BRANCH"; then
                   ok=true
                   break
                 fi
-                echo "GitLab push attempt $i failed for batch $BATCH_NUM, retrying..."
-                git fetch origin "$BRANCH" 2>/dev/null || true
-                sleep 10
+                echo "GitLab push attempt $i failed for batch $BATCH_NUM — someone else moved the ref, re-syncing..."
+                if git fetch origin "$BRANCH" 2>/dev/null; then
+                  # Move onto the new tip but keep our batch's changes staged,
+                  # then recommit on top of it before trying the push again.
+                  git reset --soft FETCH_HEAD
+                  git add --pathspec-from-file="$batch_file" 2>/dev/null || true
+                  git commit -m "dump: $BRANCH batch $BATCH_NUM [$TIMESTAMP]" || true
+                fi
+                sleep 5
               done
               if [ "$ok" != "true" ]; then
                 echo "ERROR: GitLab upload failed at batch $BATCH_NUM after 3 attempts"
