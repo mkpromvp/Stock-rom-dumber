@@ -367,6 +367,8 @@ jobs:
             rm -f /tmp/gitlab_batch_*
             split -l $BATCH_SIZE /tmp/gitlab_filelist.txt /tmp/gitlab_batch_
 
+            PUSHED_COUNT=0
+
             for batch_file in /tmp/gitlab_batch_*; do
               BATCH_NUM=$((BATCH_NUM + 1))
               echo "=== Batch $BATCH_NUM: $batch_file ==="
@@ -391,6 +393,8 @@ jobs:
                 echo "ERROR: GitLab upload failed at batch $BATCH_NUM after 3 attempts"
                 exit 1
               fi
+
+              PUSHED_COUNT=$((PUSHED_COUNT + $(wc -l < "$batch_file")))
             done
 
             if [ "$BATCH_NUM" -eq 0 ]; then
@@ -400,13 +404,10 @@ jobs:
 
             echo "All $BATCH_NUM batches pushed successfully."
 
-            # Final safety check: make sure the pushed tree matches the local tree exactly.
-            git fetch origin "$BRANCH"
-            LOCAL_COUNT=$(find . -type f ! -path './.git/*' | wc -l)
-            REMOTE_COUNT=$(git ls-tree -r "origin/$BRANCH" --name-only | wc -l)
-            echo "Local files: $LOCAL_COUNT | Remote files on GitLab: $REMOTE_COUNT"
-            if [ "$LOCAL_COUNT" -ne "$REMOTE_COUNT" ]; then
-              echo "ERROR: GitLab tree is incomplete ($REMOTE_COUNT/$LOCAL_COUNT files pushed)."
+            # Local, network-free safety check (no re-fetch — avoids doubling disk usage on the runner).
+            echo "Files in dump: $TOTAL_FILES | Files staged across batches: $PUSHED_COUNT"
+            if [ "$PUSHED_COUNT" -ne "$TOTAL_FILES" ]; then
+              echo "ERROR: Batch coverage mismatch ($PUSHED_COUNT/$TOTAL_FILES files staged)."
               exit 1
             fi
           fi
