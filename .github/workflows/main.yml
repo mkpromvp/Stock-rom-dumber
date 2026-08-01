@@ -371,23 +371,26 @@ jobs:
           git config http.lowSpeedTime 600
 
           # Resume support: if this branch already has commits on GitLab (from a
-          # previous run that got cut off), fetch it and continue on top of that
-          # history instead of starting over and re-pushing everything.
+          # previous run that got cut off), build on top of that history without
+          # touching the working directory (avoids conflicts when re-extracted
+          # files differ slightly byte-for-byte, e.g. APK/JAR timestamps).
+          git checkout -B "$BRANCH"
+          : > /tmp/gitlab_remote_files.txt
           if git fetch --depth=1 origin "$BRANCH" 2>/tmp/gitlab_fetch.log; then
             echo "Existing branch found on GitLab — resuming on top of it."
-            git checkout -B "$BRANCH" FETCH_HEAD
+            git reset --soft FETCH_HEAD
+            git ls-tree -r --name-only FETCH_HEAD | sort > /tmp/gitlab_remote_files.txt
           else
             echo "No existing branch on GitLab (or first run) — starting fresh."
             cat /tmp/gitlab_fetch.log
-            git checkout -B "$BRANCH"
           fi
 
-          # Anything already committed on the remote shows up as tracked/clean;
-          # only genuinely new files show up as untracked — that's our real work list.
-          git status --porcelain --untracked-files=all \
-            | grep '^??' | cut -c4- | sort > /tmp/gitlab_filelist.txt
+          # Diff by path only — a file already on GitLab counts as done even if
+          # this run's copy differs by a few bytes; we never re-touch it.
+          find . -type f ! -path './.git/*' | sed 's|^\./||' | sort > /tmp/gitlab_local_files.txt
+          comm -23 /tmp/gitlab_local_files.txt /tmp/gitlab_remote_files.txt > /tmp/gitlab_filelist.txt
           TOTAL_FILES=$(wc -l < /tmp/gitlab_filelist.txt)
-          ALREADY_ON_REMOTE=$(git ls-files | wc -l)
+          ALREADY_ON_REMOTE=$(wc -l < /tmp/gitlab_remote_files.txt)
           echo "Already on GitLab: $ALREADY_ON_REMOTE | Remaining to push: $TOTAL_FILES"
 
           if [ "$TOTAL_FILES" -eq 0 ]; then
