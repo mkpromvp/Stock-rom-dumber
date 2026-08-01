@@ -331,8 +331,27 @@ jobs:
 
           rm -rf /tmp/gitlab_push
           mkdir -p /tmp/gitlab_push
-          rsync -a /tmp/final_dump/ /tmp/gitlab_push/
+          SOURCE_COUNT=$(find /tmp/final_dump -type f | wc -l)
+          echo "Files in source dump (/tmp/final_dump): $SOURCE_COUNT"
+          df -h /tmp
+
+          # cp -al hard-links files instead of duplicating their data blocks,
+          # so we don't need double the disk space just to stage the copy.
+          # Falls back to rsync only if hard-linking isn't possible (e.g. cross-device).
+          if ! cp -al /tmp/final_dump/. /tmp/gitlab_push/ 2>/tmp/cp_err.log; then
+            echo "cp -al failed, falling back to rsync (uses more disk):"
+            cat /tmp/cp_err.log
+            rsync -a /tmp/final_dump/ /tmp/gitlab_push/
+          fi
           cd /tmp/gitlab_push
+
+          COPIED_COUNT=$(find . -type f | wc -l)
+          echo "Files copied into /tmp/gitlab_push: $COPIED_COUNT"
+          if [ "$COPIED_COUNT" -ne "$SOURCE_COUNT" ]; then
+            echo "ERROR: Copy is incomplete ($COPIED_COUNT/$SOURCE_COUNT files) — likely ran out of disk space."
+            df -h /tmp
+            exit 1
+          fi
 
           git init
           git checkout -B "$BRANCH"
