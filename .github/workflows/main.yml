@@ -354,7 +354,6 @@ jobs:
           fi
 
           git init
-          git checkout -B "$BRANCH"
           git remote add origin "$AUTH_REMOTE"
 
           # Validate auth and repository path before committing big data.
@@ -371,13 +370,28 @@ jobs:
           git config http.lowSpeedLimit 1000
           git config http.lowSpeedTime 600
 
-          # Build file list (one file per line)
-          find . -type f ! -path './.git/*' | sort > /tmp/gitlab_filelist.txt
+          # Resume support: if this branch already has commits on GitLab (from a
+          # previous run that got cut off), fetch it and continue on top of that
+          # history instead of starting over and re-pushing everything.
+          if git fetch --depth=1 origin "$BRANCH" 2>/tmp/gitlab_fetch.log; then
+            echo "Existing branch found on GitLab — resuming on top of it."
+            git checkout -B "$BRANCH" FETCH_HEAD
+          else
+            echo "No existing branch on GitLab (or first run) — starting fresh."
+            cat /tmp/gitlab_fetch.log
+            git checkout -B "$BRANCH"
+          fi
+
+          # Anything already committed on the remote shows up as tracked/clean;
+          # only genuinely new files show up as untracked — that's our real work list.
+          git status --porcelain --untracked-files=all \
+            | grep '^??' | cut -c4- | sort > /tmp/gitlab_filelist.txt
           TOTAL_FILES=$(wc -l < /tmp/gitlab_filelist.txt)
-          echo "Total files to push: $TOTAL_FILES"
+          ALREADY_ON_REMOTE=$(git ls-files | wc -l)
+          echo "Already on GitLab: $ALREADY_ON_REMOTE | Remaining to push: $TOTAL_FILES"
 
           if [ "$TOTAL_FILES" -eq 0 ]; then
-            echo "Nothing to push."
+            echo "Nothing to push — GitLab already has the full dump."
           else
             BATCH_SIZE=150
             BATCH_NUM=0
@@ -399,15 +413,23 @@ jobs:
 
               ok=false
               for i in 1 2 3; do
-                if git push --force origin "$BRANCH"; then
+                if [ "$i" -lt 3 ]; then
+                  push_cmd="git push origin $BRANCH"
+                else
+                  # Last resort only: keeps anything new on the remote, just moves the ref.
+                  push_cmd="git push --force-with-lease origin $BRANCH"
+                fi
+                if $push_cmd; then
                   ok=true
                   break
                 fi
                 echo "GitLab push attempt $i failed for batch $BATCH_NUM, retrying..."
+                git fetch origin "$BRANCH" 2>/dev/null || true
                 sleep 10
               done
               if [ "$ok" != "true" ]; then
                 echo "ERROR: GitLab upload failed at batch $BATCH_NUM after 3 attempts"
+                echo "Progress so far is safely on GitLab — just re-run the workflow to resume."
                 exit 1
               fi
 
@@ -422,7 +444,7 @@ jobs:
             echo "All $BATCH_NUM batches pushed successfully."
 
             # Local, network-free safety check (no re-fetch — avoids doubling disk usage on the runner).
-            echo "Files in dump: $TOTAL_FILES | Files staged across batches: $PUSHED_COUNT"
+            echo "Files remaining to push: $TOTAL_FILES | Files staged across batches: $PUSHED_COUNT"
             if [ "$PUSHED_COUNT" -ne "$TOTAL_FILES" ]; then
               echo "ERROR: Batch coverage mismatch ($PUSHED_COUNT/$TOTAL_FILES files staged)."
               exit 1
