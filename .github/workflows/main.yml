@@ -379,7 +379,7 @@ jobs:
           if [ "$TOTAL_FILES" -eq 0 ]; then
             echo "Nothing to push."
           else
-            BATCH_SIZE=30
+            BATCH_SIZE=150
             BATCH_NUM=0
             TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
 
@@ -393,15 +393,13 @@ jobs:
               echo "=== Batch $BATCH_NUM: $batch_file ==="
 
               git reset HEAD . 2>/dev/null || true
-              while IFS= read -r f; do
-                git add "$f" 2>/dev/null || true
-              done < "$batch_file"
+              git add --pathspec-from-file="$batch_file" 2>/dev/null || true
 
               git commit -m "dump: $BRANCH batch $BATCH_NUM [$TIMESTAMP]" || true
 
               ok=false
               for i in 1 2 3; do
-                if git push origin "$BRANCH"; then
+                if git push --force origin "$BRANCH"; then
                   ok=true
                   break
                 fi
