@@ -375,22 +375,36 @@ jobs:
           # touching the working directory (avoids conflicts when re-extracted
           # files differ slightly byte-for-byte, e.g. APK/JAR timestamps).
           git checkout -B "$BRANCH"
-          : > /tmp/gitlab_remote_files.txt
+          : > /tmp/gitlab_remote_sizes.txt
           if git fetch --depth=1 origin "$BRANCH" 2>/tmp/gitlab_fetch.log; then
             echo "Existing branch found on GitLab — resuming on top of it."
             git reset --soft FETCH_HEAD
-            git ls-tree -r --name-only FETCH_HEAD | sort > /tmp/gitlab_remote_files.txt
+            # "<path><TAB><size>" for every blob already committed on the remote.
+            git ls-tree -r -l FETCH_HEAD \
+              | awk -F'\t' '{n=split($1,a," "); print $2"\t"a[n]}' \
+              | sort -t $'\t' -k1,1 > /tmp/gitlab_remote_sizes.txt
           else
             echo "No existing branch on GitLab (or first run) — starting fresh."
             cat /tmp/gitlab_fetch.log
           fi
 
-          # Diff by path only — a file already on GitLab counts as done even if
-          # this run's copy differs by a few bytes; we never re-touch it.
-          find . -type f ! -path './.git/*' | sed 's|^\./||' | sort > /tmp/gitlab_local_files.txt
-          comm -23 /tmp/gitlab_local_files.txt /tmp/gitlab_remote_files.txt > /tmp/gitlab_filelist.txt
+          # "<path><TAB><size>" for every file in the local dump.
+          find . -type f ! -path './.git/*' -printf '%P\t%s\n' \
+            | sort -t $'\t' -k1,1 > /tmp/gitlab_local_sizes.txt
+
+          # A path counts as "already done" only if it exists remotely AND the
+          # size matches exactly — missing files, or ones present with a
+          # mismatched size (e.g. a push cut off mid-object), go back on the
+          # upload list instead of being silently skipped.
+          join -t $'\t' -j 1 -o 1.1,1.2,2.2 \
+            /tmp/gitlab_local_sizes.txt /tmp/gitlab_remote_sizes.txt \
+            > /tmp/gitlab_joined.txt
+          awk -F'\t' '$2==$3 {print $1}' /tmp/gitlab_joined.txt \
+            | sort > /tmp/gitlab_confirmed_done.txt
+          cut -f1 /tmp/gitlab_local_sizes.txt | sort > /tmp/gitlab_local_files.txt
+          comm -23 /tmp/gitlab_local_files.txt /tmp/gitlab_confirmed_done.txt > /tmp/gitlab_filelist.txt
           TOTAL_FILES=$(wc -l < /tmp/gitlab_filelist.txt)
-          ALREADY_ON_REMOTE=$(wc -l < /tmp/gitlab_remote_files.txt)
+          ALREADY_ON_REMOTE=$(wc -l < /tmp/gitlab_confirmed_done.txt)
           echo "Already on GitLab: $ALREADY_ON_REMOTE | Remaining to push: $TOTAL_FILES"
 
           if [ "$TOTAL_FILES" -eq 0 ]; then
