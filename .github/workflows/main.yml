@@ -364,7 +364,10 @@ jobs:
             BATCH_NUM=0
             TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
 
-            while IFS= read -r batch_file; do
+            rm -f /tmp/gitlab_batch_*
+            split -l $BATCH_SIZE /tmp/gitlab_filelist.txt /tmp/gitlab_batch_
+
+            for batch_file in /tmp/gitlab_batch_*; do
               BATCH_NUM=$((BATCH_NUM + 1))
               echo "=== Batch $BATCH_NUM: $batch_file ==="
 
@@ -388,9 +391,24 @@ jobs:
                 echo "ERROR: GitLab upload failed at batch $BATCH_NUM after 3 attempts"
                 exit 1
               fi
-            done < <(split -l $BATCH_SIZE /tmp/gitlab_filelist.txt /tmp/gitlab_batch_)
+            done
+
+            if [ "$BATCH_NUM" -eq 0 ]; then
+              echo "ERROR: No batches were built from file list — check /tmp/gitlab_filelist.txt"
+              exit 1
+            fi
 
             echo "All $BATCH_NUM batches pushed successfully."
+
+            # Final safety check: make sure the pushed tree matches the local tree exactly.
+            git fetch origin "$BRANCH"
+            LOCAL_COUNT=$(find . -type f ! -path './.git/*' | wc -l)
+            REMOTE_COUNT=$(git ls-tree -r "origin/$BRANCH" --name-only | wc -l)
+            echo "Local files: $LOCAL_COUNT | Remote files on GitLab: $REMOTE_COUNT"
+            if [ "$LOCAL_COUNT" -ne "$REMOTE_COUNT" ]; then
+              echo "ERROR: GitLab tree is incomplete ($REMOTE_COUNT/$LOCAL_COUNT files pushed)."
+              exit 1
+            fi
           fi
 
       - name: Mirror to Gitea / Codeberg
