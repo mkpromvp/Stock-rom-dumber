@@ -348,28 +348,30 @@ jobs:
 
           find . -type f -name '*.apk' -size +100M -delete 2>/dev/null || true
 
-          # Push in batches to avoid timeout / size limits
-          BATCH_SIZE=50
-          TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
-          TOTAL_FILES=$(find . -type f ! -path './.git/*' | wc -l)
+          git config http.postBuffer 524288000
+          git config http.lowSpeedLimit 1000
+          git config http.lowSpeedTime 600
+
+          # Build file list (one file per line)
+          find . -type f ! -path './.git/*' | sort > /tmp/gitlab_filelist.txt
+          TOTAL_FILES=$(wc -l < /tmp/gitlab_filelist.txt)
           echo "Total files to push: $TOTAL_FILES"
 
           if [ "$TOTAL_FILES" -eq 0 ]; then
             echo "Nothing to push."
           else
-            # Sort all files, split into batches
-            find . -type f ! -path './.git/*' -print0 | sort -z > /tmp/gitlab_files.txt
-            OFFSET=0
+            BATCH_SIZE=30
             BATCH_NUM=0
-            while true; do
-              BATCH=$(tr '\0' '\n' < /tmp/gitlab_files.txt | tail -n +$((OFFSET + 1)) | head -n $BATCH_SIZE)
-              [ -z "$BATCH" ] && break
-              BATCH_NUM=$((BATCH_NUM + 1))
-              echo "--- Pushing batch $BATCH_NUM ---"
+            TIMESTAMP="$(date -u '+%Y-%m-%d %H:%M UTC')"
 
-              echo "$BATCH" | while IFS= read -r f; do
-                [ -f "$f" ] && git add "$f"
-              done
+            while IFS= read -r batch_file; do
+              BATCH_NUM=$((BATCH_NUM + 1))
+              echo "=== Batch $BATCH_NUM: $batch_file ==="
+
+              git reset HEAD . 2>/dev/null || true
+              while IFS= read -r f; do
+                git add "$f" 2>/dev/null || true
+              done < "$batch_file"
 
               git commit -m "dump: $BRANCH batch $BATCH_NUM [$TIMESTAMP]" || true
 
@@ -379,13 +381,15 @@ jobs:
                   ok=true
                   break
                 fi
-                echo "GitLab push attempt $i failed for batch $BATCH_NUM."
-                sleep 5
+                echo "GitLab push attempt $i failed for batch $BATCH_NUM, retrying..."
+                sleep 10
               done
-              [ "$ok" = true ] || { echo "ERROR: GitLab upload failed at batch $BATCH_NUM"; exit 1; }
+              if [ "$ok" != "true" ]; then
+                echo "ERROR: GitLab upload failed at batch $BATCH_NUM after 3 attempts"
+                exit 1
+              fi
+            done < <(split -l $BATCH_SIZE /tmp/gitlab_filelist.txt /tmp/gitlab_batch_)
 
-              OFFSET=$((OFFSET + BATCH_SIZE))
-            done
             echo "All $BATCH_NUM batches pushed successfully."
           fi
 
